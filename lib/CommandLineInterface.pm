@@ -1,5 +1,17 @@
 package CommandLineInterface;
 
+##
+## NOTICE
+## ------
+## This is a pre-release version of this module, which has been incorporated
+## into multiple released tools under http://github.com/hepcat72/.  This module
+## has not yet been released as its own stand-alone module.  It is in alpha
+## phase development, and while it can be used, as it is found in other tools,
+## it is provided with no guarantee.  Core functionality may be subject to
+## change before beta release.
+##
+
+
 #Robert William Leach
 #Princeton University
 #Carl Icahn Laboratory
@@ -341,7 +353,7 @@ sub setScriptInfo
     $created_on_date       = $infohash{CREATED};
     $script_author         = $infohash{AUTHOR};
     $script_contact        = $infohash{CONTACT};
-    $script_company        = $infohash{COMAPNY};
+    $script_company        = $infohash{COMPANY};
     $script_license        = $infohash{LICENSE};
     $advanced_help         = $infohash{DETAILED_HELP};
   }
@@ -424,10 +436,14 @@ sub addInfileOption
     my $req_rel_str = getRelationStr($in[9]); #e.g. 1,1:1,1:M,1:1orM
     my $flagless    = $in[10];#Whether the option can be supplied sans flag
 
-    #Trim leading hard returns and white space characters (from using '<<')
+    #Trim leading & trailing hard returns and white space characters (from
+    #using '<<')
     $smry_desc   =~ s/^\s+//s if(defined($smry_desc));
+    $smry_desc   =~ s/\s+$//s if(defined($smry_desc));
     $detail_desc =~ s/^\s+//s if(defined($detail_desc));
+    $detail_desc =~ s/\s+$//s if(defined($detail_desc));
     $format_desc =~ s/^\s+//s if(defined($format_desc));
+    $format_desc =~ s/\s+$//s if(defined($format_desc));
 
     if($command_line_processed)
       {
@@ -503,17 +519,10 @@ sub addInfileOption
     #state of the file type this is linked to, otherwise 0.
     if(!defined($hidden) && defined($req_with))
       {
-	my $uhash = getInfileUsageHash($req_with);
-	if(defined($uhash))
-	  {$hidden = $uhash->{HIDDEN}}
+	if(isFileTypeHidden($req_with))
+	  {$hidden = 1}
 	else
-	  {
-	    #TODO: Requirement 280 will allow linking to either input or
-	    #      output file types
-	    error("Could not retrieve hidden status of PAIR_WITH input ",
-		  "file type: [$req_with].  Setting HIDDEN to unhidden.");
-	    $hidden = 0;
-	  }
+	  {$hidden = 0}
       }
     elsif(!defined($hidden))
       {$hidden = 0}
@@ -1175,10 +1184,14 @@ sub addOutfileOption
     my $req_rel_str = getRelationStr($in[10]); #e.g. 1,1:1,1:M,1:1orM
     my $flagless    = $in[11];#Whether the option can be supplied sans flag
 
-    #Trim leading hard returns and white space characters (from using '<<')
+    #Trim leading & trailing hard returns and white space characters (from
+    #using '<<')
     $smry_desc   =~ s/^\s+//s if(defined($smry_desc));
+    $smry_desc   =~ s/\s+$//s if(defined($smry_desc));
     $detail_desc =~ s/^\s+//s if(defined($detail_desc));
+    $detail_desc =~ s/\s+$//s if(defined($detail_desc));
     $format_desc =~ s/^\s+//s if(defined($format_desc));
+    $format_desc =~ s/\s+$//s if(defined($format_desc));
 
     if($command_line_processed)
       {
@@ -1270,17 +1283,10 @@ sub addOutfileOption
     #type this might be linked to, otherwise 0.
     if(!defined($hidden) && defined($req_with))
       {
-	my $uhash = getInfileUsageHash($req_with);
-	if(defined($uhash))
-	  {$hidden = $uhash->{HIDDEN}}
+	if(isFileTypeHidden($req_with))
+	  {$hidden = 1}
 	else
-	  {
-	    #TODO: Requirement 280 will allow linking to either input or
-	    #      output file types
-	    error("Could not retrieve hidden status of PAIR_WITH input ",
-		  "file type: [$req_with].  Setting HIDDEN to unhidden.");
-	    $hidden = 0;
-	  }
+	  {$hidden = 0}
       }
     elsif(!defined($hidden))
       {$hidden = 0}
@@ -1464,6 +1470,34 @@ sub isFileTypeRequired
     return(0)
   }
 
+sub isFileTypeHidden
+  {
+    my $file_type_id = $_[0];
+
+    if(!defined($file_type_id) || $file_type_id >= scalar(@$input_files_array))
+      {
+	error("Invalid file type ID: [",
+	      (defined($file_type_id) ? $file_type_id : 'undef'),"].");
+	return(0);
+      }
+
+    my $uhash = {};
+    if(exists($outfile_types_hash->{$file_type_id}))
+      {$uhash = getOutfileUsageHash($file_type_id)}
+    else
+      {$uhash = getInfileUsageHash($file_type_id)}
+
+    if(!defined($uhash) || !exists($uhash->{HIDDEN}) ||
+       !defined($uhash->{HIDDEN}))
+      {
+	warning("Usage hash for file type ID [$file_type_id] invalid/not ",
+		"found.");
+	return(0);
+      }
+
+    return($uhash->{HIDDEN})
+  }
+
 sub getFileFlag
   {
     my $file_type_index = $_[0];
@@ -1560,10 +1594,14 @@ sub addOutfileSuffixOption
     #output mode that the user can control per outfile type.  See requirement
     #114
 
-    #Trim leading hard returns and white space characters (from using '<<')
+    #Trim leading & trailing hard returns and white space characters (from
+    #using '<<')
     $smry_desc   =~ s/^\s+//s if(defined($smry_desc));
+    $smry_desc   =~ s/\s+$//s if(defined($smry_desc));
     $detail_desc =~ s/^\s+//s if(defined($detail_desc));
+    $detail_desc =~ s/\s+$//s if(defined($detail_desc));
     $format_desc =~ s/^\s+//s if(defined($format_desc));
+    $format_desc =~ s/\s+$//s if(defined($format_desc));
 
     if(defined($get_opt_val) && ref($get_opt_val) ne 'SCALAR')
       {
@@ -1687,21 +1725,15 @@ sub addOutfileSuffixOption
       }
 
     #If hidden is not defined, default to the hidden state of whatever file
-    #type this might be linked to (by the programmer - not internally, like
-    #through addOutfileOption), otherwise 0.
-    if(!defined($hidden) && defined($file_type_index) && !$called_implicitly)
+    #type this might be linked to, except when called via addOutfileOption,
+    #otherwise 0.
+    if(!defined($hidden) && defined($file_type_index) &&
+       !isCaller('addOutfileOption'))
       {
-	my $uhash = getInfileUsageHash($file_type_index);
-	if(defined($uhash))
-	  {$hidden = $uhash->{HIDDEN}}
+	if(isFileTypeHidden($file_type_index))
+	  {$hidden = 1}
 	else
-	  {
-	    #TODO: Requirement 280 will allow linking to either input or
-	    #      output file types
-	    error("Could not retrieve hidden status of FILETYPEID input file ",
-		  "type: [$file_type_index].  Setting HIDDEN to unhidden.");
-	    $hidden = 0;
-	  }
+	  {$hidden = 0}
       }
     elsif(!defined($hidden))
       {$hidden = 0}
@@ -2578,9 +2610,12 @@ sub addOutdirOption
     my $detail_desc = $in[5]; #e.g. 'Input file(s).  Space separated,...'
     my $flagless    = $in[6]; #Whether the option can be supplied sans flag
 
-    #Trim leading hard returns and white space characters (from using '<<')
+    #Trim leading & trailing hard returns and white space characters (from
+    #using '<<')
     $smry_desc   =~ s/^\s+//s if(defined($smry_desc));
+    $smry_desc   =~ s/\s+$//s if(defined($smry_desc));
     $detail_desc =~ s/^\s+//s if(defined($detail_desc));
+    $detail_desc =~ s/\s+$//s if(defined($detail_desc));
 
     if($command_line_processed)
       {
@@ -2794,9 +2829,12 @@ sub addOption
     my $detail_desc     = $in[6]; #e.g. 'Input file(s).  Space separated,...'
     my $accepts         = $in[7]; #e.g. ['yes','no']
 
-    #Trim leading hard returns and white space characters (from using '<<')
+    #Trim leading & trailing hard returns and white space characters (from
+    #using '<<')
     $smry_desc   =~ s/^\s+//s if(defined($smry_desc));
+    $smry_desc   =~ s/\s+$//s if(defined($smry_desc));
     $detail_desc =~ s/^\s+//s if(defined($detail_desc));
+    $detail_desc =~ s/\s+$//s if(defined($detail_desc));
 
     if($command_line_processed)
       {
@@ -2953,9 +2991,12 @@ sub addArrayOption
     my $accepts         = $in[8]; #e.g. ['yes','no']
     my $flagless        = $in[9]; #Whether the option can be supplied sans flag
 
-    #Trim leading hard returns and white space characters (from using '<<')
+    #Trim leading & trailing hard returns and white space characters (from
+    #using '<<')
     $smry_desc   =~ s/^\s+//s if(defined($smry_desc));
+    $smry_desc   =~ s/\s+$//s if(defined($smry_desc));
     $detail_desc =~ s/^\s+//s if(defined($detail_desc));
+    $detail_desc =~ s/\s+$//s if(defined($detail_desc));
 
     #Make sure the user has specified a string type if interpolate is true
     if(defined($interpolate) && $interpolate && $get_opt_str !~ /=s$/)
@@ -3116,9 +3157,12 @@ sub add2DArrayOption
     my $accepts         = $in[7]; #e.g. ['yes','no']
     my $flagless        = $in[8]; #Whether the option can be supplied sans flag
 
-    #Trim leading hard returns and white space characters (from using '<<')
+    #Trim leading & trailing hard returns and white space characters (from
+    #using '<<')
     $smry_desc   =~ s/^\s+//s if(defined($smry_desc));
+    $smry_desc   =~ s/\s+$//s if(defined($smry_desc));
     $detail_desc =~ s/^\s+//s if(defined($detail_desc));
+    $detail_desc =~ s/\s+$//s if(defined($detail_desc));
 
     #Make sure the user has specified a string type
     if($get_opt_str !~ /=s$/)
@@ -4525,19 +4569,47 @@ sub addDefaultFileOptions
 				   (defined($prim_outf_usg_hash->{$_}) ?
 				    $prim_outf_usg_hash->{$_} : 'undef')}
 		       keys(%$prim_outf_usg_hash)),"\n].");
-	    my $outf_ids = getSuffixIDs($prim_outf_usg_hash->{FILEID});
-	    my $outf_id = $outf_ids->[0];
-	    if(scalar(@$outf_ids) > 1)
-	      {warning("Unexpected number of suffix IDs associated with ",
-		       "outfile type: [$prim_outf_usg_hash->{FILEID}].")}
-	    createSuffixOutfileTagteam($default_outfile_suffix_id,
-				       $outf_id);
+
+	    my $outf_linked_inf_id =
+	      (map {$_->[1]} grep {$prim_outf_usg_hash->{FILEID} == $_->[0]}
+	       @$required_relationships)[0];
+	    my $suff_linked_inf_id =
+	      $suffix_id_lookup->[$default_outfile_suffix_id]->[0];
+
+	    #If both outfile types are linked to the same input file type, go
+	    #ahead and create the tagteam, otherwise, skip it.  Note: Defined
+	    #state is checked because an outfile type can be created without
+	    #linking it to an input file.
+	    if(defined($outf_linked_inf_id) &&
+	       $outf_linked_inf_id == $suff_linked_inf_id)
+	      {
+		my $outf_ids = getSuffixIDs($prim_outf_usg_hash->{FILEID});
+		my $outf_id = $outf_ids->[0];
+		if(scalar(@$outf_ids) > 1)
+		  {warning("Unexpected number of suffix IDs associated with ",
+			   "outfile type: [$prim_outf_usg_hash->{FILEID}].")}
+		createSuffixOutfileTagteam($default_outfile_suffix_id,
+					   $outf_id);
+	      }
+	    else
+	      {debug({LEVEL => -1},"Skipping tagteam creation because each ",
+		     "outfile type is linked to different infiles.")}
 	  }
 	elsif($default_outfile_added)
 	  {
 	    my $prim_suff_usg_hash = getDefaultPrimaryOutUsageHash(1);
-	    createSuffixOutfileTagteam($prim_suff_usg_hash->{FILEID},
-				       $def_outf_suff_id);
+	    my $outf_linked_inf_id =
+	      (map {$_->[1]}
+	       grep {$suffix_id_lookup->[$def_outf_suff_id]->[0] == $_->[0]}
+	       @$required_relationships)[0];
+	    my $suff_linked_inf_id =
+	      $suffix_id_lookup->[$prim_suff_usg_hash->{FILEID}]->[0];
+
+	    #If both outfile types are linked to the same inpit file type, go
+	    #ahead and create the tagteam, otherwise, skip it.
+	    if($outf_linked_inf_id == $suff_linked_inf_id)
+	      {createSuffixOutfileTagteam($prim_suff_usg_hash->{FILEID},
+					  $def_outf_suff_id)}
 	  }
       }
 
@@ -6023,13 +6095,28 @@ sub requireFileRelationships
 
 	my $test_files = $input_files_array->[$test_ftype];
 
-	#If the test tile type is not required and there are none, skip
+	#If the test file type is not required and there are none, skip
 	if(scalar(@$test_files) == 0)
 	  {
 	    if(isFileTypeRequired($test_ftype))
 	      {
-		error("Input file type [",getFileFlag($test_ftype),
-		      "] is required.");
+		my $hid = isFileTypeHidden($test_ftype);
+		if($hid && $test_ftype == $primary_infile_type)
+		  {error("Input file supplied via standard input redirect is ",
+			 "required.")}
+		elsif(!$hid && $test_ftype != $primary_infile_type)
+		  {error("Input file supplied via flag [",
+			 getFileFlag($test_ftype),"] is required.")}
+		elsif(!$hid && $test_ftype == $primary_infile_type)
+		  {error("Input file supplied by either standard input ",
+			 "redirect or via flag [",getFileFlag($test_ftype),
+			 "] is required.")}
+		else
+		  {
+		    #This shouldn't happen, but putting it here just in case
+		    error("Input file supplied by hidden flag [",
+			  getFileFlag($test_ftype),"] is required.");
+		  }
 		$relationship_violation = 1;
 	      }
 	    next;
@@ -12189,11 +12276,9 @@ sub help
     my $lmd      = localtime($ctime);
     $script =~ s/^.*\/([^\/]+)$/$1/;
 
-    #$script_version_number  - global
     $script_version_number = 'UNKNOWN'
       if(!defined($script_version_number));
 
-    #$created_on_date - global
     $created_on_date = 'UNKNOWN' if(!defined($created_on_date) ||
 				    $created_on_date eq 'DATE HERE');
 
@@ -12528,7 +12613,12 @@ sub customHelp
       {
 	my $flag = '* ' . "INPUT FORMAT:\n" . $usage_hash->{OPTFLAG};
 	if($usage_hash->{HIDDEN} && $usage_hash->{PRIMARY})
-	  {$flag = '* ' . "STDIN FORMAT:"}
+	  {
+	    $flag = '* ' . "STDIN FORMAT:";
+	    #Include the hidden flags if extended > 1
+	    if($extended > 1)
+	      {$flag .= "\n" . $usage_hash->{OPTFLAG}}
+	  }
 	my $desc = $usage_hash->{FORMAT};
 
 	if(!defined($desc) || $desc eq '')
@@ -12580,7 +12670,7 @@ sub customHelp
 	  {$flag .= "OUTPUT FORMAT:"}
 
 	#Append the flags to the header as a sub-title if not hidden
-	if(!$usage_hash->{HIDDEN})
+	if(!$usage_hash->{HIDDEN} || $extended > 1)
 	  {$flag .= "\n" . $usage_hash->{OPTFLAG}}
 
 	my $desc = $usage_hash->{FORMAT};
@@ -12674,9 +12764,9 @@ sub alignHelpCols
 		substr($desc_remainder,$desc_col_len - 1,1) : '';
 	    my $added_hyphen = 0;
 	    if($desc_start =~ /\n\n/)
-	      {$desc_start =~ s/\n(?!\n).*//s}
+	      {$desc_start =~ s/(?<=\n)\n.*//s}
 	    elsif($desc_start =~ /\n/)
-	      {$desc_start =~ s/\n.*//s}
+	      {$desc_start =~ s/(?<=\n).*//s}
 	    elsif($desc_start !~ /\s$/ && $next_char !~ /^\s/)
 	      {
 		$desc_start =~ s/(.*)\b\{lb}\s*\S+/$1/;
@@ -12693,27 +12783,17 @@ sub alignHelpCols
 	    #If the line was empty (i.e. the only character was \n)
 	    if($desc_start eq '')
 	      {
-		chop($desc_start) if($added_hyphen);
 		if($desc_remainder =~ /^\n(.*)/s)
 		  {$desc_remainder = $1}
 	      }
 	    else
 	      {
-		if($desc_start =~ /\n$/)
-		  {
-		    chomp($desc_start);
-		    $desc_remainder = "\n" . $desc_remainder;
-		  }
-		my $pat = $desc_start;
 		chop($desc_start) if($added_hyphen);
-		if($desc_remainder =~ /\Q$pat\E *\n?(.*)/s)
-		  {$desc_remainder = $1}
-		else
+		if($desc_remainder =~ /\Q$desc_start\E(.*)/s)
 		  {
-		    #Backup method of removing the beginning of the string from
-		    #the remainder (not as strict/precise)
-		    my $plen = length($desc_start);
-		    $desc_remainder =~ s/^.{$plen}//s;
+		    $desc_remainder = $1;
+		    $desc_remainder =~ s/^ *// unless($desc_start =~ /\n/);
+		    chomp($desc_start);
 		  }
 	      }
 
@@ -12801,12 +12881,12 @@ sub alignUsageCols
 		substr($desc_remainder,$desc_col_len - 1,1) : '';
 	    my $added_hyphen = 0;
 	    if($desc_start =~ /\n\n/)
-	      {$desc_start =~ s/\n(?!\n).*//s}
+	      {$desc_start =~ s/(?<=\n)\n.*//s}
 	    elsif($desc_start =~ /\n/)
-	      {$desc_start =~ s/\n.*//s}
+	      {$desc_start =~ s/(?<=\n).*//s}
 	    elsif($desc_start !~ /\s$/ && $next_char !~ /^\s/)
 	      {
-		$desc_start =~ s/(.*)\b\{lb}\s*\S+$/$1/;
+		$desc_start =~ s/(.*)\b\{lb}\s*\S+/$1/;
 		if(length($desc_start) == $desc_col_len)
 		  {$desc_start =~ s/\s+\S{1,20}$//}
 		if(length($desc_start) == $desc_col_len)
@@ -12820,16 +12900,18 @@ sub alignUsageCols
 	    #If the line was empty (i.e. the only character was \n)
 	    if($desc_start eq '')
 	      {
-		chop($desc_start) if($added_hyphen);
 		if($desc_remainder =~ /^\n(.*)/s)
 		  {$desc_remainder = $1}
 	      }
 	    else
 	      {
-		my $pat = $desc_start;
 		chop($desc_start) if($added_hyphen);
-		if($desc_remainder =~ /\Q$desc_start\E\s*(.*)/s)
-		  {$desc_remainder = $1}
+		if($desc_remainder =~ /\Q$desc_start\E(.*)/s)
+		  {
+		    $desc_remainder = $1;
+		    $desc_remainder =~ s/^ *// unless($desc_start =~ /\n/);
+		    chomp($desc_start);
+		  }
 	      }
 
 	    debug({LEVEL => -1},"Next portion: [$desc_start]\n",
@@ -12973,17 +13055,21 @@ sub getSummaryUsageOptStr
 	  }
       }
 
-    my $summary_str =
-      join('',("\n",(!$primary_inf_exists ||
-		     ($primary_inf_exists && !$primary_hidden) ?
-		     "$script " . ($requireds ne '' ? "$requireds " : '') .
-		     "[$optionals]\n" : ''),
-	       (($local_extended && $primary_inf_exists) ||
-		($primary_inf_exists && $primary_hidden) ?
-		"$script " . ($requireds_wo_prim ne '' ?
-			      "$requireds_wo_prim " : '') .
-		"[$optionals_wo_prim] < input_file\n" : ''),
-	       "\n"));
+    #Hidden only refers to the flags and thus the usage entries.  If a primary
+    #infile option is hidden, this summary string is the only indication that
+    #the script can take anything on STDIN.
+    my $summary_str = (!$primary_inf_exists ||
+		       ($primary_inf_exists && !$primary_hidden) ?
+		       "$script " . ($requireds ne '' ? "$requireds " : '') .
+		       "[$optionals]\n" : '');
+    if($local_extended || ($primary_inf_exists && $primary_hidden))
+      {
+	$summary_str .= ($summary_str eq '' ? '' : "\n");
+	$summary_str .= "$script " . ($requireds_wo_prim ne '' ?
+				      "$requireds_wo_prim " : '') .
+					"[$optionals_wo_prim] < input_file\n";
+      }
+    $summary_str .= "\n";
 
     return($summary_str);
   }
@@ -13144,7 +13230,7 @@ BEGIN
   {
     #Enable export of subs & vars
     require Exporter;
-    $VERSION       = '4.099';
+    $VERSION       = '4.107';
     our @ISA       = qw(Exporter);
     our @EXPORT    = qw(openIn                       openOut
 			closeIn                      closeOut
