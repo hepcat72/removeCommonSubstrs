@@ -6,7 +6,9 @@ use warnings;
 use strict;
 use CommandLineInterface;
 
-setScriptInfo(VERSION => '1.002',
+our $VERSION = '1.003';
+
+setScriptInfo(VERSION => $VERSION,
               CREATED => '1/5/2018',
               AUTHOR  => 'Robert William Leach',
               CONTACT => 'rleach@princeton.edu',
@@ -157,15 +159,15 @@ else
 	    if(scalar(@$str_array)  == 0 ||
 	       (scalar(@$str_array) == 1 && scalar(@{$str_array->[0]}) == 1))
 	      {
-		error("Fewer than 2 (uncommented) values were found in file ",
-		      "[$infile].",
-		      {DETAIL => ('Strings must be either tab-delimited or ' .
-				  'there must be 1 on each of multiple ' .
-				  'lines.' .
-				  (scalar(@$str_array) == 1 &&
-				   scalar(@{$str_array->[0]}) == 1 ?
-				   '  Value found: [' . $str_array->[0]->[0] .
-				   '].' : ''))});
+		warning("Fewer than 2 (uncommented) values were found in ",
+			"file [$infile].",
+			{DETAIL => ('Strings must be either tab-delimited ' .
+				    'or there must be 1 on each of multiple ' .
+				    'lines.' .
+				    (scalar(@$str_array) == 1 &&
+				     scalar(@{$str_array->[0]}) == 1 ?
+				     '  Value found: [' .
+				     $str_array->[0]->[0] . '].' : ''))});
 		next;
 	      }
 	  }
